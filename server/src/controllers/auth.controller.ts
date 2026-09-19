@@ -7,10 +7,12 @@ import { config } from '../config/env';
 
 const REFRESH_COOKIE_NAME = 'jwt_refresh';
 
+const isProduction = config.env === 'production' || config.cookie.secure;
+
 const cookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: config.cookie.secure,
-  sameSite: 'lax',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
   path: '/api/auth',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
@@ -33,20 +35,21 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     success: true,
     data: {
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
       user: result.user,
     },
   });
 };
 
 export const refresh = async (req: Request, res: Response): Promise<void> => {
-  const token = req.cookies?.[REFRESH_COOKIE_NAME];
+  const token = req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
 
   if (!token) {
     res.status(401).json({
       success: false,
       error: {
         code: 'NO_REFRESH_TOKEN',
-        message: 'No refresh token provided in HttpOnly cookie',
+        message: 'No refresh token provided',
       },
     });
     return;
@@ -61,19 +64,22 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
     success: true,
     data: {
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
       user: result.user,
     },
   });
 };
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
-  const token = req.cookies?.[REFRESH_COOKIE_NAME];
+  const token = req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
   if (token) {
     await revokeRefreshToken(token);
   }
 
   res.clearCookie(REFRESH_COOKIE_NAME, {
     httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/api/auth',
   });
 

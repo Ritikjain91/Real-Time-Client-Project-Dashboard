@@ -1,5 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
+import { API_BASE_URL } from '../config';
+
+const REFRESH_STORAGE_KEY = 'velozity_refresh_token';
+
+const resolveUrl = (input: RequestInfo | URL): RequestInfo | URL => {
+  if (typeof input === 'string' && input.startsWith('/')) {
+    return `${API_BASE_URL}${input}`;
+  }
+  return input;
+};
 
 interface AuthContextType {
   user: User | null;
@@ -26,7 +36,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers.set('Authorization', `Bearer ${accessToken}`);
       }
 
-      let response = await fetch(input, {
+      const targetUrl = resolveUrl(input);
+
+      let response = await fetch(targetUrl, {
         ...init,
         headers,
         credentials: 'include', // Include HttpOnly cookies
@@ -35,8 +47,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Handle token expiration: attempt transparent refresh
       if (response.status === 401 && accessToken) {
         try {
-          const refreshRes = await fetch('/api/auth/refresh', {
+          const storedRefreshToken = localStorage.getItem(REFRESH_STORAGE_KEY);
+          const refreshRes = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: storedRefreshToken }),
             credentials: 'include',
           });
 
@@ -45,19 +60,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const newToken = data.data.accessToken;
             setAccessToken(newToken);
             setUser(data.data.user);
+            if (data.data.refreshToken) {
+              localStorage.setItem(REFRESH_STORAGE_KEY, data.data.refreshToken);
+            }
 
             headers.set('Authorization', `Bearer ${newToken}`);
-            response = await fetch(input, {
+            response = await fetch(targetUrl, {
               ...init,
               headers,
               credentials: 'include',
             });
           } else {
             // Refresh failed: session expired
+            localStorage.removeItem(REFRESH_STORAGE_KEY);
             setAccessToken(null);
             setUser(null);
           }
         } catch {
+          localStorage.removeItem(REFRESH_STORAGE_KEY);
           setAccessToken(null);
           setUser(null);
         }
@@ -68,12 +88,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [accessToken]
   );
 
-  // Attempt initial session restore via refresh cookie
+  // Attempt initial session restore via refresh cookie or stored refresh token
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const res = await fetch('/api/auth/refresh', {
+        const storedRefreshToken = localStorage.getItem(REFRESH_STORAGE_KEY);
+        const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: storedRefreshToken }),
           credentials: 'include',
         });
 
@@ -81,6 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const data = await res.json();
           setAccessToken(data.data.accessToken);
           setUser(data.data.user);
+          if (data.data.refreshToken) {
+            localStorage.setItem(REFRESH_STORAGE_KEY, data.data.refreshToken);
+          }
         } else {
           // Default demo fallback: login as Admin on first visit for evaluator convenience
           await login('admin@agency.com', 'Password123!');
@@ -101,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password = 'Password123!') => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -115,6 +141,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setAccessToken(data.data.accessToken);
       setUser(data.data.user);
+      if (data.data.refreshToken) {
+        localStorage.setItem(REFRESH_STORAGE_KEY, data.data.refreshToken);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -126,11 +155,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', {
+      const storedRefreshToken = localStorage.getItem(REFRESH_STORAGE_KEY);
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: storedRefreshToken }),
         credentials: 'include',
       });
     } finally {
+      localStorage.removeItem(REFRESH_STORAGE_KEY);
       setAccessToken(null);
       setUser(null);
     }

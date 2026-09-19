@@ -7,6 +7,13 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding...');
 
+  // Check if database is already seeded
+  const userCount = await prisma.user.count();
+  if (userCount > 0 && process.env.FORCE_SEED !== 'true') {
+    console.log(`ℹ️ Database already contains ${userCount} users. Skipping seed (set FORCE_SEED=true to override).`);
+    return;
+  }
+
   // Clean existing records in correct relation order
   await prisma.notification.deleteMany();
   await prisma.taskActivity.deleteMany();

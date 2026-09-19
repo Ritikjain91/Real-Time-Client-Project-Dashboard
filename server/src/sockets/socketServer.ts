@@ -3,6 +3,7 @@ import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { config } from '../config/env';
+import { corsOriginDelegate } from '../config/cors';
 import { JwtPayload } from '../types';
 import { logger } from '../lib/logger';
 import { presenceTracker } from './presence';
@@ -17,7 +18,7 @@ let io: Server | null = null;
 export const initSocketServer = (httpServer: HttpServer): Server => {
   io = new Server(httpServer, {
     cors: {
-      origin: [config.clientUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+      origin: corsOriginDelegate,
       credentials: true,
     },
     pingInterval: 10000,

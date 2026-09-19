@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '5000', 10),
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  clientUrl: process.env.CLIENT_URL || (process.env.NODE_ENV === 'production' ? 'https://client-ten-delta-68.vercel.app' : 'http://localhost:5173'),
   
   databaseUrl: process.env.DATABASE_URL || 'postgresql://voyager:voyager@localhost:5432/dashboard_db?schema=public',
   
@@ -21,7 +21,7 @@ export const config = {
   cookie: {
     secret: process.env.COOKIE_SECRET || 'velozity_super_secret_cookie_signing_key_2026',
     domain: process.env.COOKIE_DOMAIN || undefined,
-    secure: process.env.COOKIE_SECURE === 'true',
+    secure: process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production',
   },
   
   cron: {

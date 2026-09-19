@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
 import { config } from './config/env';
+import { corsOriginDelegate } from './config/cors';
 import { logger } from './lib/logger';
 import { initSocketServer } from './sockets/socketServer';
 import { startOverdueTaskScheduler } from './jobs/overdueScanner';
@@ -22,7 +23,7 @@ const httpServer = http.createServer(app);
 // Cross-Origin Resource Sharing
 app.use(
   cors({
-    origin: [config.clientUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: corsOriginDelegate,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

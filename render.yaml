@@ -1,0 +1,34 @@
+databases:
+  - name: dashboard-postgres
+    databaseName: dashboard_db
+    user: dashboard_user
+    plan: free
+
+services:
+  - type: web
+    name: dashboard-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npx prisma db push && npx tsx prisma/seed.ts && npm run start
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dashboard-postgres
+          property: connectionString
+      - key: CLIENT_URL
+        sync: false # Set this to your Vercel deployment URL (e.g., https://your-project.vercel.app)
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: OVERDUE_SCANNER_CRON
+        value: "*/5 * * * *"
