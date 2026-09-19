@@ -1,0 +1,26 @@
+{
+  "name": "real-time-client-project-dashboard",
+  "version": "1.0.0",
+  "description": "Real-Time Client Project Dashboard with Role-Based Access & Live Activity Feed",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "prisma:seed": "npm --prefix server run prisma:seed",
+    "test:api": "npm --prefix server run test:api",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build"
+  },
+  "keywords": [
+    "react",
+    "typescript",
+    "express",
+    "postgresql",
+    "prisma",
+    "socket.io",
+    "rbac",
+    "realtime"
+  ],
+  "author": "Full Stack Software Engineer",
+  "license": "MIT"
+}

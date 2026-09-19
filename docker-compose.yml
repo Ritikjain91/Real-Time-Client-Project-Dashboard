@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Container
+  db:
+    image: postgres:16-alpine
+    container_name: velozity_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: dashboard_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dashboard_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Express + WebSocket Backend API
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: velozity_api
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      CLIENT_URL: http://localhost:5173
+      DATABASE_URL: postgresql://postgres:postgrespassword@db:5432/dashboard_db?schema=public
+      JWT_ACCESS_SECRET: velozity_dashboard_access_secret_key_production_grade_jwt_2026
+      JWT_REFRESH_SECRET: velozity_dashboard_refresh_secret_key_production_grade_jwt_2026
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      COOKIE_SECRET: velozity_super_secret_cookie_signing_key_2026
+      COOKIE_SECURE: "false"
+      OVERDUE_SCANNER_CRON: "* * * * *"
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # React + Vite Frontend
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: velozity_client
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:
